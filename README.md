@@ -1,8 +1,8 @@
 # AQRESS Pulse
 
-AQRESS Pulse is a configurable IoT sensor and device management platform. This repository currently contains the **V0.1.1 Phase 2 database and authentication foundation**: PostgreSQL, Alembic, SQLAlchemy, JWT authentication, EMQX, FastAPI, and the React/TypeScript/Vite foundation.
+AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 3 Site and Device Management application**, built on the Phase 1 infrastructure and Phase 2 authentication foundation.
 
-Sites, devices, sensor management, telemetry ingestion, simulation, dashboards, and deployment are intentionally not implemented yet.
+Authenticated users can create, search, view, edit, and deactivate sites and devices. Sensor management, MQTT device communication, telemetry, simulation, dashboards, and deployment are intentionally not implemented yet.
 
 ## Prerequisites
 
@@ -51,6 +51,8 @@ docker compose run --rm backend python -m app.scripts.seed_admin
 
 The seed reads `AQRESS_PULSE_ADMIN_*` values from `.env` and is idempotent.
 
+Open <http://localhost:5173> and sign in with the configured development admin email and password. The frontend restores sessions through `/auth/me`, rotates expired access tokens through `/auth/refresh`, and logs out when refresh is no longer valid.
+
 ## Database migrations
 
 Apply all migrations:
@@ -94,6 +96,29 @@ curl --fail --request POST http://localhost:8000/api/v1/auth/login \
 
 Access tokens live for 15 minutes and refresh tokens for 7 days by default. Both lifetimes are configurable. Refresh tokens rotate on use; the used token is revoked and cannot be reused. PostgreSQL stores only SHA-256 hashes of refresh tokens. Passwords are hashed with Argon2id.
 
+## Site and Device API
+
+All endpoints require authentication. `ADMIN` and `USER` roles can read and write; `VIEWER` is read-only and receives `403 Forbidden` for write operations.
+
+- Sites: `GET/POST /api/v1/sites`, `GET/PUT /api/v1/sites/{id}`, `PATCH /api/v1/sites/{id}/status`, and `GET /api/v1/sites/{id}/devices`.
+- Devices: `GET/POST /api/v1/devices`, `GET/PUT /api/v1/devices/{id}`, and `PATCH /api/v1/devices/{id}/status`.
+
+Collections accept `page` and `page_size` (defaults `1` and `25`, maximum `100`). Sites support `search` and `is_active`; devices support `search`, `site_id`, `status`, and `is_active`. Results use `items` plus a `pagination` object.
+
+Example site and device requests, using an access token in `TOKEN`:
+
+```bash
+curl --request POST http://localhost:8000/api/v1/sites \
+  --header "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' \
+  --data '{"name":"AQRESS IoT Lab","description":"Pulse development laboratory","latitude":-26.2041,"longitude":28.0473}'
+
+curl --request POST http://localhost:8000/api/v1/devices \
+  --header "Authorization: Bearer $TOKEN" --header 'Content-Type: application/json' \
+  --data '{"site_id":"SITE_UUID","device_uid":"ESP32-A8C339","name":"Lab ESP32 Controller","description":"Development IoT controller","device_type":"ESP32","manufacturer":"Espressif","model":"ESP32","firmware_version":"0.1.0","connection_type":"WIFI"}'
+```
+
+New devices always start as `PROVISIONING`; Phase 3 never marks a device online automatically. Normal application flows use soft activation/deactivation and provide no physical delete endpoints.
+
 ## Verify the stack
 
 ```bash
@@ -104,7 +129,7 @@ docker compose exec postgres pg_isready -U aqress_pulse -d aqress_pulse
 docker compose exec emqx emqx ctl status
 ```
 
-Run all Phase 2 checks:
+Run all Phase 1–3 checks:
 
 ```bash
 make check
@@ -176,10 +201,10 @@ backend/                 FastAPI application and tests
   app/api/v1/            Versioned API routes
   app/core/              Configuration, security, and API errors
   app/db/                SQLAlchemy base and async sessions
-  app/models/            User and refresh-token models
+  app/models/            User, refresh-token, site, and device models
   app/repositories/      Database access
   app/schemas/           Pydantic API schemas
-  app/services/          Authentication business rules
+  app/services/          Authentication and domain business rules
   alembic/               Versioned PostgreSQL migrations
 frontend/                React + TypeScript + Vite application
 Doc/                     Product and engineering source documents
@@ -197,11 +222,11 @@ The ingestion worker, simulator, and firmware directories will be added in their
 - Set a long random `EMQX_NODE_COOKIE` in `.env`; it protects Erlang node communication and must match across broker nodes if clustering is introduced later.
 - PostgreSQL uses host port `5433` by default to avoid collisions with an existing local PostgreSQL installation; it remains on port `5432` inside Compose.
 - EMQX dashboard credentials are configured separately from future per-device MQTT authentication and ACLs. Device identities and topic isolation belong to later phases.
-- PostgreSQL currently contains only Phase 2 `users`, `refresh_tokens`, and Alembic version tables.
+- PostgreSQL contains `users`, `refresh_tokens`, `sites`, `devices`, and Alembic version tables.
 - Application source is copied into the local images rather than bind-mounted, which avoids Docker Desktop file-sharing requirements for the XAMPP workspace. Rebuild after code changes with `docker compose up --build`; use the optional direct-host commands for hot reload.
 - All database/API timestamps are timezone-aware and stored in UTC using PostgreSQL `TIMESTAMPTZ`.
 - Local development defaults are intentionally not production credentials. Replace them in `.env`; never commit that file.
 
 ## Phase boundary
 
-Phase 2 establishes the permanent database migration and authentication foundation. It does not implement Sites, Devices, Sensors, MQTT device identities, telemetry, or dashboards. Do not proceed to Phase 3 without an explicit instruction.
+Phase 3 implements only the User → Site → Device hierarchy and authenticated management UI. It does not implement Sensors, MQTT device identities/ACLs, heartbeat processing, telemetry, readings, alerts, dashboards, simulation, or cloud deployment. Do not proceed to Phase 4 without an explicit instruction.

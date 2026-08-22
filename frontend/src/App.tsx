@@ -1,46 +1,24 @@
-import { useQuery } from '@tanstack/react-query'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
-type HealthResponse = {
-  status: 'healthy'
-}
+import { useAuth } from './auth/AuthContext'
+import { AppShell } from './components/AppShell'
+import { DeviceDetailPage } from './pages/DeviceDetailPage'
+import { DeviceFormPage } from './pages/DeviceFormPage'
+import { DevicesPage } from './pages/DevicesPage'
+import { LoginPage } from './pages/LoginPage'
+import { SiteDetailPage } from './pages/SiteDetailPage'
+import { SiteFormPage } from './pages/SiteFormPage'
+import { SitesPage } from './pages/SitesPage'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
-
-async function fetchHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${apiBaseUrl}/health`)
-  if (!response.ok) {
-    throw new Error('The API health check failed.')
-  }
-  return response.json() as Promise<HealthResponse>
+function Protected() {
+  const { user, loading } = useAuth()
+  const location = useLocation()
+  if (loading) return <main className="grid min-h-screen place-items-center bg-slate-950 text-slate-300">Restoring your session…</main>
+  return user ? <AppShell /> : <Navigate to="/login" replace state={{ from: location.pathname }} />
 }
 
 function App() {
-  const health = useQuery({
-    queryKey: ['api-health'],
-    queryFn: fetchHealth,
-    retry: 1,
-  })
-
-  const status = health.isPending ? 'Checking…' : health.isSuccess ? 'Healthy' : 'Unavailable'
-
-  return (
-    <main className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100">
-      <section className="mx-auto max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl sm:p-12">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-400">AQRESS</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Pulse</h1>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
-          Local-first IoT sensor and device management platform. The Phase 1 project foundation is running.
-        </p>
-        <div className="mt-10 flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
-          <span
-            aria-hidden="true"
-            className={`h-3 w-3 rounded-full ${health.isSuccess ? 'bg-emerald-400' : health.isPending ? 'bg-amber-400' : 'bg-red-400'}`}
-          />
-          <span className="font-medium">FastAPI status: {status}</span>
-        </div>
-      </section>
-    </main>
-  )
+  return <Routes><Route path="/login" element={<LoginPage />} /><Route element={<Protected />}><Route path="/sites" element={<SitesPage />} /><Route path="/sites/new" element={<SiteFormPage />} /><Route path="/sites/:siteId" element={<SiteDetailPage />} /><Route path="/sites/:siteId/edit" element={<SiteFormPage />} /><Route path="/devices" element={<DevicesPage />} /><Route path="/devices/new" element={<DeviceFormPage />} /><Route path="/devices/:deviceId" element={<DeviceDetailPage />} /><Route path="/devices/:deviceId/edit" element={<DeviceFormPage />} /></Route><Route path="*" element={<Navigate to="/sites" replace />} /></Routes>
 }
 
 export default App

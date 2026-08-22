@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.db.session import get_db_session
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services.auth_service import AuthService
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -24,3 +24,8 @@ async def get_current_user(
         )
     return await AuthService(session).get_user_from_access_token(credentials.credentials)
 
+
+async def require_writer(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.role == UserRole.VIEWER:
+        raise AppError(status_code=403, code="FORBIDDEN", message="Your role does not allow this action.")
+    return user

@@ -11,6 +11,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.refresh_token import RefreshToken
+    from app.models.site import Site
 
 
 class UserRole(str, enum.Enum):
@@ -41,4 +42,4 @@ class User(Base):
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-
+    created_sites: Mapped[list["Site"]] = relationship(back_populates="created_by_user")

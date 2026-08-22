@@ -32,9 +32,17 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
     config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", test_url.render_as_string(hide_password=False))
     try:
+        command.upgrade(config, "20260822_0001")
+        engine = create_engine(test_url)
+        phase_two_tables = set(inspect(engine).get_table_names())
+        assert {"users", "refresh_tokens"}.issubset(phase_two_tables)
+        assert "sites" not in phase_two_tables
+        assert "devices" not in phase_two_tables
+        engine.dispose()
+
         command.upgrade(config, "head")
         engine = create_engine(test_url)
-        assert {"users", "refresh_tokens", "alembic_version"}.issubset(
+        assert {"users", "refresh_tokens", "sites", "devices", "alembic_version"}.issubset(
             set(inspect(engine).get_table_names())
         )
         engine.dispose()
@@ -43,6 +51,8 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         engine = create_engine(test_url)
         assert "users" not in inspect(engine).get_table_names()
         assert "refresh_tokens" not in inspect(engine).get_table_names()
+        assert "sites" not in inspect(engine).get_table_names()
+        assert "devices" not in inspect(engine).get_table_names()
         engine.dispose()
     finally:
         with psycopg.connect(
