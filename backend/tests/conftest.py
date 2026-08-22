@@ -14,11 +14,11 @@ from alembic.config import Config
 
 runtime_url = os.environ.get(
     "DATABASE_URL",
-    "postgresql+psycopg://sensegrid:sensegrid-local-only@localhost:5433/sensegrid",
+    "postgresql+psycopg://aqress_pulse:aqress-pulse-local-only@localhost:5433/aqress_pulse",
 )
 test_database_url = os.environ.get(
     "TEST_DATABASE_URL",
-    make_url(runtime_url).set(database="sensegrid_test").render_as_string(False),
+    make_url(runtime_url).set(database="aqress_pulse_test").render_as_string(False),
 )
 os.environ["DATABASE_URL"] = test_database_url
 
@@ -26,7 +26,7 @@ from app.core.config import settings  # noqa: E402
 from app.db.session import engine as async_engine  # noqa: E402
 from app.main import app  # noqa: E402
 
-TEST_DATABASE_NAME = make_url(test_database_url).database or "sensegrid_test"
+TEST_DATABASE_NAME = make_url(test_database_url).database or "aqress_pulse_test"
 admin_url = make_url(test_database_url).set(drivername="postgresql", database="postgres")
 
 

@@ -1,12 +1,12 @@
-# AQRESS SenseGrid Codex Build Prompt
+# AQRESS Pulse Codex Build Prompt
 
 **Version:** V0.1.1  
 **Status:** Authoritative / Current  
-**Supersedes:** All earlier AQRESS SenseGrid Codex Markdown prompts. Do not use older prompt copies.
+**Supersedes:** All earlier AQRESS Pulse Codex Markdown prompts. Do not use older prompt copies.
 
 # 1. Role and Objective
 
-- Act as a senior full-stack software architect and developer building AQRESS SenseGrid, a configurable IoT sensor and device management platform.
+- Act as a senior full-stack software architect and developer building AQRESS Pulse, a configurable IoT sensor and device management platform.
 
 - The first milestone must run entirely on a local development machine. Do not implement cloud deployment yet.
 
@@ -70,7 +70,7 @@
 
 # 8. MQTT Contract and Authorization
 
-- Topics: sensegrid/{device_uid}/telemetry, /status, /config, /config/ack, /command, /command/ack.
+- Topics: pulse/{device_uid}/telemetry, /status, /config, /config/ack, /command, /command/ack.
 
 - Each device has its own identity/credentials. Broker ACLs allow publish only telemetry/status/config-ack/command-ack and subscribe only config/command for that same device UID.
 
@@ -113,4 +113,4 @@
 
 # 12. Prompt to Start Phase 1
 
-*Start with Phase 1 only. Build the AQRESS SenseGrid local project foundation. Verify docker compose up, PostgreSQL, EMQX, FastAPI and React are healthy; implement GET /api/v1/health; update README; run checks; fix errors; then stop. Do not implement database domain tables, authentication, sensor logic or deployment yet. At completion report files changed, commands run, checks/results, exact local test commands and known limitations.*
+*Start with Phase 1 only. Build the AQRESS Pulse local project foundation. Verify docker compose up, PostgreSQL, EMQX, FastAPI and React are healthy; implement GET /api/v1/health; update README; run checks; fix errors; then stop. Do not implement database domain tables, authentication, sensor logic or deployment yet. At completion report files changed, commands run, checks/results, exact local test commands and known limitations.*

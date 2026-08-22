@@ -27,7 +27,7 @@ function App() {
     <main className="min-h-screen bg-slate-950 px-6 py-16 text-slate-100">
       <section className="mx-auto max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl sm:p-12">
         <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-400">AQRESS</p>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">SenseGrid</h1>
+        <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Pulse</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
           Local-first IoT sensor and device management platform. The Phase 1 project foundation is running.
         </p>
@@ -44,4 +44,3 @@ function App() {
 }
 
 export default App
-

@@ -11,7 +11,7 @@ TEST_PASSWORD = "Correct-Horse-Battery-Staple-42"
 
 def create_test_user(
     *,
-    email: str = "admin@sensegrid.dev",
+    email: str = "admin@aqress.dev",
     password: str = TEST_PASSWORD,
     role: UserRole = UserRole.ADMIN,
 ) -> User:
@@ -32,7 +32,7 @@ def create_test_user(
     return user
 
 
-def login(client: object, email: str = "admin@sensegrid.dev") -> dict[str, object]:
+def login(client: object, email: str = "admin@aqress.dev") -> dict[str, object]:
     response = client.post(  # type: ignore[attr-defined]
         "/api/v1/auth/login", json={"email": email, "password": TEST_PASSWORD}
     )

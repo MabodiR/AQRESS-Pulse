@@ -1,6 +1,6 @@
-# AQRESS SenseGrid
+# AQRESS Pulse
 
-AQRESS SenseGrid is a configurable IoT sensor and device management platform. This repository currently contains the **V0.1.1 Phase 2 database and authentication foundation**: PostgreSQL, Alembic, SQLAlchemy, JWT authentication, EMQX, FastAPI, and the React/TypeScript/Vite foundation.
+AQRESS Pulse is a configurable IoT sensor and device management platform. This repository currently contains the **V0.1.1 Phase 2 database and authentication foundation**: PostgreSQL, Alembic, SQLAlchemy, JWT authentication, EMQX, FastAPI, and the React/TypeScript/Vite foundation.
 
 Sites, devices, sensor management, telemetry ingestion, simulation, dashboards, and deployment are intentionally not implemented yet.
 
@@ -49,7 +49,7 @@ The backend applies pending Alembic migrations before starting. Seed the local a
 docker compose run --rm backend python -m app.scripts.seed_admin
 ```
 
-The seed reads `SENSEGRID_ADMIN_*` values from `.env` and is idempotent.
+The seed reads `AQRESS_PULSE_ADMIN_*` values from `.env` and is idempotent.
 
 ## Database migrations
 
@@ -89,7 +89,7 @@ Example login after seeding:
 ```bash
 curl --fail --request POST http://localhost:8000/api/v1/auth/login \
   --header 'Content-Type: application/json' \
-  --data '{"email":"admin@sensegrid.dev","password":"YOUR_LOCAL_ADMIN_PASSWORD"}'
+  --data '{"email":"admin@aqress.dev","password":"YOUR_LOCAL_ADMIN_PASSWORD"}'
 ```
 
 Access tokens live for 15 minutes and refresh tokens for 7 days by default. Both lifetimes are configurable. Refresh tokens rotate on use; the used token is revoked and cannot be reused. PostgreSQL stores only SHA-256 hashes of refresh tokens. Passwords are hashed with Argon2id.
@@ -100,7 +100,7 @@ Access tokens live for 15 minutes and refresh tokens for 7 days by default. Both
 docker compose ps
 curl --fail http://localhost:8000/api/v1/health
 curl --fail http://localhost:5173
-docker compose exec postgres pg_isready -U sensegrid -d sensegrid
+docker compose exec postgres pg_isready -U aqress_pulse -d aqress_pulse
 docker compose exec emqx emqx ctl status
 ```
 
@@ -120,7 +120,7 @@ docker compose run --rm frontend npm run typecheck
 docker compose run --rm frontend npm run build
 ```
 
-Backend tests create and drop dedicated `sensegrid_test` and `sensegrid_migration_test` databases. They do not truncate or mutate the normal `sensegrid` development database.
+Backend tests create and drop dedicated `aqress_pulse_test` and `aqress_pulse_migration_test` databases. They do not truncate or mutate the normal `aqress_pulse` development database.
 
 ## Common commands
 

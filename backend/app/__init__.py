@@ -1,2 +1,1 @@
-"""AQRESS SenseGrid API package."""
-
+"""AQRESS Pulse API package."""

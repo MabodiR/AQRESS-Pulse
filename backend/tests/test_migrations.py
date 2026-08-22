@@ -9,7 +9,7 @@ from alembic import command
 from alembic.config import Config
 from app.core.config import settings
 
-MIGRATION_TEST_DATABASE = "sensegrid_migration_test"
+MIGRATION_TEST_DATABASE = "aqress_pulse_migration_test"
 
 
 def test_migrations_upgrade_empty_database_and_downgrade() -> None:

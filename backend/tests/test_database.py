@@ -18,14 +18,14 @@ def test_password_is_hashed() -> None:
 
 
 def test_duplicate_normalized_email_is_rejected() -> None:
-    create_test_user(email="Case@SenseGrid.Dev")
+    create_test_user(email="Case@Aqress.Dev")
     engine = create_engine(settings.database_url)
     with pytest.raises(IntegrityError), Session(engine) as session, session.begin():
         session.add(
             User(
                 first_name="Duplicate",
                 last_name="User",
-                email="case@sensegrid.dev",
+                email="case@aqress.dev",
                 password_hash="not-used",
                 role=UserRole.USER,
             )

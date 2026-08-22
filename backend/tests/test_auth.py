@@ -32,7 +32,7 @@ def test_incorrect_password_uses_generic_error(client: TestClient) -> None:
     create_test_user()
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "admin@sensegrid.dev", "password": "incorrect"},
+        json={"email": "admin@aqress.dev", "password": "incorrect"},
     )
 
     assert response.status_code == 401
@@ -43,7 +43,7 @@ def test_incorrect_password_uses_generic_error(client: TestClient) -> None:
 def test_unknown_email_uses_generic_error(client: TestClient) -> None:
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "unknown@sensegrid.dev", "password": "incorrect"},
+        json={"email": "unknown@aqress.dev", "password": "incorrect"},
     )
 
     assert response.status_code == 401

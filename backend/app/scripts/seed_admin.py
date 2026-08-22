@@ -42,7 +42,7 @@ def seed_admin(data: AdminSeedData, database_url: str | None = None) -> tuple[Us
 def main() -> None:
     if not settings.admin_email or not settings.admin_password:
         raise SystemExit(
-            "SENSEGRID_ADMIN_EMAIL and SENSEGRID_ADMIN_PASSWORD must be set before seeding."
+            "AQRESS_PULSE_ADMIN_EMAIL and AQRESS_PULSE_ADMIN_PASSWORD must be set before seeding."
         )
     user, created = seed_admin(
         AdminSeedData(

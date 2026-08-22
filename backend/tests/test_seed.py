@@ -7,7 +7,7 @@ from app.models.user import User, UserRole
 from app.scripts.seed_admin import AdminSeedData, seed_admin
 
 SEED_DATA = AdminSeedData(
-    email="Seed.Admin@SenseGrid.Dev",
+    email="Seed.Admin@Aqress.Dev",
     password="Local-Seed-Password-42",
     first_name="Seed",
     last_name="Administrator",
@@ -18,7 +18,7 @@ def test_admin_seed_succeeds() -> None:
     user, created = seed_admin(SEED_DATA)
 
     assert created is True
-    assert user.email == "seed.admin@sensegrid.dev"
+    assert user.email == "seed.admin@aqress.dev"
     assert user.role is UserRole.ADMIN
     assert verify_password(SEED_DATA.password, user.password_hash)
 
