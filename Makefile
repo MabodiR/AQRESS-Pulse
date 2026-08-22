@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps backend-test backend-lint frontend-lint frontend-typecheck frontend-build check
+.PHONY: up down build logs ps migrate downgrade seed-admin backend-test backend-lint frontend-lint frontend-typecheck frontend-build check
 
 up:
 	docker compose up --build
@@ -14,6 +14,15 @@ logs:
 
 ps:
 	docker compose ps
+
+migrate:
+	docker compose run --rm backend alembic upgrade head
+
+downgrade:
+	docker compose run --rm backend alembic downgrade -1
+
+seed-admin:
+	docker compose run --rm backend python -m app.scripts.seed_admin
 
 backend-test:
 	docker compose run --rm backend pytest
