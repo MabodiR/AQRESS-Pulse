@@ -1,0 +1,30 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / Vite
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Logs and local data
+*.log
+coverage/
+htmlcov/
+.docker-verification/
