@@ -1,11 +1,11 @@
 /* eslint-disable react-refresh/only-export-components -- UI helpers intentionally colocated */
-import type { DeviceStatus } from '../lib/types'
+import type { ConfigurationStatus, DeviceStatus, SensorStatus } from '../lib/types'
 
 export const formatDate = (value: string | null) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Never'
 
-export function StatusBadge({ active, status }: { active?: boolean; status?: DeviceStatus }) {
+export function StatusBadge({ active, status }: { active?: boolean; status?: DeviceStatus | SensorStatus | ConfigurationStatus }) {
   const text = status ?? (active ? 'ACTIVE' : 'INACTIVE')
-  const positive = status === 'ONLINE' || (!status && active)
+  const positive = status === 'ONLINE' || status === 'REGISTERED' || status === 'APPLIED' || (!status && active)
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${positive ? 'bg-emerald-500/15 text-emerald-300' : status === 'ERROR' ? 'bg-red-500/15 text-red-300' : 'bg-amber-500/15 text-amber-300'}`}>{text}</span>
 }
 

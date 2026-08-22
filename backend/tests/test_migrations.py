@@ -47,11 +47,26 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         assert "sensor_types" not in phase_three_tables
         engine.dispose()
 
+        command.upgrade(config, "20260822_0003")
+        engine = create_engine(test_url)
+        phase_four_tables = set(inspect(engine).get_table_names())
+        assert {"sensor_types", "measurement_definitions"}.issubset(phase_four_tables)
+        assert "sensors" not in phase_four_tables
+        engine.dispose()
+
         command.upgrade(config, "head")
         engine = create_engine(test_url)
-        assert {"users", "refresh_tokens", "sites", "devices", "sensor_types", "measurement_definitions", "alembic_version"}.issubset(
-            set(inspect(engine).get_table_names())
+        inspector = inspect(engine)
+        assert {"users", "refresh_tokens", "sites", "devices", "sensor_types", "measurement_definitions", "sensors", "sensor_channels", "sensor_configurations", "alembic_version"}.issubset(
+            set(inspector.get_table_names())
         )
+        assert "sensor_readings" not in inspector.get_table_names()
+        assert "uq_sensors_device_id_sensor_uid" in {item["name"] for item in inspector.get_unique_constraints("sensors")}
+        assert "uq_sensor_channels_sensor_id_measurement_definition_id" in {item["name"] for item in inspector.get_unique_constraints("sensor_channels")}
+        assert "uq_sensor_configurations_sensor_id_config_version" in {item["name"] for item in inspector.get_unique_constraints("sensor_configurations")}
+        current_index = next(item for item in inspector.get_indexes("sensor_configurations") if item["name"] == "uq_sensor_configurations_current")
+        assert current_index["unique"] is True
+        assert current_index["dialect_options"]["postgresql_where"] == "is_current"
         engine.dispose()
 
         command.downgrade(config, "base")
@@ -62,6 +77,7 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         assert "devices" not in inspect(engine).get_table_names()
         assert "sensor_types" not in inspect(engine).get_table_names()
         assert "measurement_definitions" not in inspect(engine).get_table_names()
+        assert "sensors" not in inspect(engine).get_table_names()
         engine.dispose()
     finally:
         with psycopg.connect(

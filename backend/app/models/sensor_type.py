@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean,
@@ -18,6 +18,9 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.sensor import Sensor, SensorChannel
 
 
 class InterfaceType(str, enum.Enum):
@@ -54,6 +57,7 @@ class SensorType(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     measurements: Mapped[list["MeasurementDefinition"]] = relationship(back_populates="sensor_type", cascade="all, delete-orphan", order_by="MeasurementDefinition.name")
+    sensors: Mapped[list["Sensor"]] = relationship(back_populates="sensor_type")
 
 
 class MeasurementDefinition(Base):
@@ -74,3 +78,4 @@ class MeasurementDefinition(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     sensor_type: Mapped[SensorType] = relationship(back_populates="measurements")
+    sensor_channels: Mapped[list["SensorChannel"]] = relationship(back_populates="measurement_definition")

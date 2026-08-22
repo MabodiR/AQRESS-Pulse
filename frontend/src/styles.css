@@ -22,11 +22,11 @@ body {
   .field-error { @apply mt-1 block min-h-5 text-xs font-normal text-red-300; }
   .button-primary { @apply inline-flex items-center justify-center rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50; }
   .button-secondary { @apply inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40; }
-  .meta { @apply text-xs font-bold uppercase tracking-wider text-slate-500; }
+  .meta { @apply text-xs font-bold uppercase tracking-wider text-slate-400; }
 }
 
 table { @apply w-full min-w-[700px] border-collapse text-left text-sm; }
-th { @apply border-b border-slate-800 px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-500; }
+th { @apply border-b border-slate-800 px-5 py-4 text-xs font-bold uppercase tracking-wider text-slate-400; }
 td { @apply border-b border-slate-800/70 px-5 py-4 text-slate-300; }
 tbody tr:last-child td { @apply border-b-0; }
 tbody tr:hover { @apply bg-slate-800/30; }

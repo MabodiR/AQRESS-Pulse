@@ -1,8 +1,8 @@
 # AQRESS Pulse
 
-AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 4 Sensor Type Framework**, built on the Phase 1 infrastructure, Phase 2 authentication, and Phase 3 Site and Device Management application.
+AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 5 Physical Sensor Management** application, built on the Phase 1 infrastructure, Phase 2 authentication, Phase 3 Site and Device Management, and Phase 4 Sensor Type Framework.
 
-Authenticated users can manage sites and devices and consume a reusable Sensor Type catalogue. Physical Sensor instances, MQTT device communication, telemetry, simulation, dashboards, and deployment are intentionally not implemented yet.
+Authenticated users can attach physical Sensors to Devices, generate Channels from the reusable Sensor Type catalogue, and maintain immutable desired-configuration history. MQTT device communication, telemetry, simulation, dashboards, and deployment are intentionally not implemented yet.
 
 ## Prerequisites
 
@@ -154,6 +154,26 @@ The idempotent seed provides:
 
 Open <http://localhost:5173/sensor-types> after login to browse the catalogue. Administrators can create/edit Sensor Types and add Measurement Definitions through the UI.
 
+## Physical Sensors and configuration
+
+A Sensor is a physical instance attached to one Device and backed by one Sensor Type. Its `sensor_uid` identifies it only within that Device: the database enforces `UNIQUE(device_id, sensor_uid)`, so two Devices may each have an `ENV-001`, while one Device may not have it twice.
+
+Creating a Sensor is atomic. AQRESS Pulse validates the active Device, the active and ready Sensor Type, and the submitted values against the Phase 4 JSON Schema contract. It then creates exactly one Sensor Channel for each Measurement Definition and configuration version 1. Channels preserve the catalogue definition present at registration time; later catalogue changes are not automatically reconciled with existing Sensors in Phase 5.
+
+Configuration edits never overwrite history. They supersede the previous desired version and create the next version as `PENDING`, with a PostgreSQL partial unique index ensuring only one `is_current = true` record per Sensor. “Current” means the latest desired state in AQRESS Pulse. It does not mean hardware has received or applied it; `APPLIED` and `applied_at` remain reserved for a later MQTT synchronization phase.
+
+To add a Sensor, open an active Device, choose **Add Sensor**, select a ready Sensor Type, enter its identity, complete the dynamically generated configuration form, review, and save. The generic renderer supports the Phase 4 schema subset: string, integer, number, boolean, enum, title, description, defaults, minimum/maximum, and required fields.
+
+Sensor endpoints are under `/api/v1`:
+
+- `GET /sensors` with Device, Site, Sensor Type, status, enabled, search, and pagination filters.
+- `GET/POST /devices/{device_id}/sensors` for Device-scoped listing and atomic registration.
+- `GET/PUT /sensors/{sensor_id}` and `PATCH /sensors/{sensor_id}/status`.
+- `GET /sensors/{sensor_id}/configuration`, `GET /sensors/{sensor_id}/configurations`, and `PUT /sensors/{sensor_id}/configuration`.
+- `PUT /sensors/{sensor_id}/channels/{channel_id}` for display name, unit, and enabled state only.
+
+`ADMIN` and `USER` may manage Sensor instances, Channels, and configuration versions. `VIEWER` is read-only. Sensor Type catalogue writes remain restricted to `ADMIN`.
+
 ## Verify the stack
 
 ```bash
@@ -164,7 +184,7 @@ docker compose exec postgres pg_isready -U aqress_pulse -d aqress_pulse
 docker compose exec emqx emqx ctl status
 ```
 
-Run all Phase 1–3 checks:
+Run all Phase 1–5 checks:
 
 ```bash
 make check
@@ -237,7 +257,7 @@ backend/                 FastAPI application and tests
   app/api/v1/            Versioned API routes
   app/core/              Configuration, security, and API errors
   app/db/                SQLAlchemy base and async sessions
-  app/models/            User, Site, Device, and Sensor Type catalogue models
+  app/models/            User, Site, Device, Sensor Type, and physical Sensor models
   app/repositories/      Database access
   app/schemas/           Pydantic API schemas
   app/services/          Authentication and domain business rules
@@ -258,11 +278,11 @@ The ingestion worker, simulator, and firmware directories will be added in their
 - Set a long random `EMQX_NODE_COOKIE` in `.env`; it protects Erlang node communication and must match across broker nodes if clustering is introduced later.
 - PostgreSQL uses host port `5433` by default to avoid collisions with an existing local PostgreSQL installation; it remains on port `5432` inside Compose.
 - EMQX dashboard credentials are configured separately from future per-device MQTT authentication and ACLs. Device identities and topic isolation belong to later phases.
-- PostgreSQL contains `users`, `refresh_tokens`, `sites`, `devices`, `sensor_types`, `measurement_definitions`, and Alembic version tables.
+- PostgreSQL contains `users`, `refresh_tokens`, `sites`, `devices`, `sensor_types`, `measurement_definitions`, `sensors`, `sensor_channels`, `sensor_configurations`, and Alembic version tables. It intentionally does not contain `sensor_readings`.
 - Application source is copied into the local images rather than bind-mounted, which avoids Docker Desktop file-sharing requirements for the XAMPP workspace. Rebuild after code changes with `docker compose up --build`; use the optional direct-host commands for hot reload.
 - All database/API timestamps are timezone-aware and stored in UTC using PostgreSQL `TIMESTAMPTZ`.
 - Local development defaults are intentionally not production credentials. Replace them in `.env`; never commit that file.
 
 ## Phase boundary
 
-Phase 4 implements only the reusable Sensor Type → Measurement Definition catalogue and JSON Schema configuration contract. It does not create physical Sensors, attach Sensor Types to Devices, or implement Sensor channels/configuration versions, MQTT, telemetry, readings, dashboards, simulation, or deployment. Do not proceed to Phase 5 without an explicit instruction.
+Phase 5 implements local physical Sensor registration, generated Channels, and immutable desired-configuration versioning. It does not publish or subscribe over MQTT, create broker credentials or ACLs, update Device presence, mark configurations published/applied, ingest telemetry, create readings, simulate hardware, build dashboards, or deploy cloud infrastructure. Do not proceed to Phase 6 without an explicit instruction.

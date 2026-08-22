@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.sensor import Sensor
     from app.models.site import Site
 
 
@@ -55,3 +56,4 @@ class Device(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     site: Mapped["Site"] = relationship(back_populates="devices")
+    sensors: Mapped[list["Sensor"]] = relationship(back_populates="device")

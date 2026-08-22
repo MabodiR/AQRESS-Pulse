@@ -1,5 +1,12 @@
 from app.models.device import ConnectionType, Device, DeviceStatus
 from app.models.refresh_token import RefreshToken
+from app.models.sensor import (
+    ConfigurationStatus,
+    Sensor,
+    SensorChannel,
+    SensorConfiguration,
+    SensorStatus,
+)
 from app.models.sensor_type import (
     InterfaceType,
     MeasurementDefinition,
@@ -14,6 +21,11 @@ __all__ = [
     "Device",
     "DeviceStatus",
     "RefreshToken",
+    "ConfigurationStatus",
+    "Sensor",
+    "SensorChannel",
+    "SensorConfiguration",
+    "SensorStatus",
     "InterfaceType",
     "MeasurementDefinition",
     "MeasurementValueType",

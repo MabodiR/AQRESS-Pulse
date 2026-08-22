@@ -12,6 +12,11 @@ import { SitesPage } from './pages/SitesPage'
 import { SensorTypeDetailPage } from './pages/SensorTypeDetailPage'
 import { SensorTypeFormPage } from './pages/SensorTypeFormPage'
 import { SensorTypesPage } from './pages/SensorTypesPage'
+import { SensorAddWizardPage } from './pages/SensorAddWizardPage'
+import { SensorConfigurationEditPage } from './pages/SensorConfigurationEditPage'
+import { SensorDetailPage } from './pages/SensorDetailPage'
+import { SensorEditPage } from './pages/SensorEditPage'
+import { SensorsPage } from './pages/SensorsPage'
 
 function Protected() {
   const { user, loading } = useAuth()
@@ -21,7 +26,7 @@ function Protected() {
 }
 
 function App() {
-  return <Routes><Route path="/login" element={<LoginPage />} /><Route element={<Protected />}><Route path="/sites" element={<SitesPage />} /><Route path="/sites/new" element={<SiteFormPage />} /><Route path="/sites/:siteId" element={<SiteDetailPage />} /><Route path="/sites/:siteId/edit" element={<SiteFormPage />} /><Route path="/devices" element={<DevicesPage />} /><Route path="/devices/new" element={<DeviceFormPage />} /><Route path="/devices/:deviceId" element={<DeviceDetailPage />} /><Route path="/devices/:deviceId/edit" element={<DeviceFormPage />} /><Route path="/sensor-types" element={<SensorTypesPage />} /><Route path="/sensor-types/new" element={<SensorTypeFormPage />} /><Route path="/sensor-types/:sensorTypeId" element={<SensorTypeDetailPage />} /><Route path="/sensor-types/:sensorTypeId/edit" element={<SensorTypeFormPage />} /></Route><Route path="*" element={<Navigate to="/sites" replace />} /></Routes>
+  return <Routes><Route path="/login" element={<LoginPage />} /><Route element={<Protected />}><Route path="/sites" element={<SitesPage />} /><Route path="/sites/new" element={<SiteFormPage />} /><Route path="/sites/:siteId" element={<SiteDetailPage />} /><Route path="/sites/:siteId/edit" element={<SiteFormPage />} /><Route path="/devices" element={<DevicesPage />} /><Route path="/devices/new" element={<DeviceFormPage />} /><Route path="/devices/:deviceId" element={<DeviceDetailPage />} /><Route path="/devices/:deviceId/edit" element={<DeviceFormPage />} /><Route path="/devices/:deviceId/sensors/new" element={<SensorAddWizardPage />} /><Route path="/sensors" element={<SensorsPage />} /><Route path="/sensors/:sensorId" element={<SensorDetailPage />} /><Route path="/sensors/:sensorId/edit" element={<SensorEditPage />} /><Route path="/sensors/:sensorId/configuration" element={<SensorConfigurationEditPage />} /><Route path="/sensor-types" element={<SensorTypesPage />} /><Route path="/sensor-types/new" element={<SensorTypeFormPage />} /><Route path="/sensor-types/:sensorTypeId" element={<SensorTypeDetailPage />} /><Route path="/sensor-types/:sensorTypeId/edit" element={<SensorTypeFormPage />} /></Route><Route path="*" element={<Navigate to="/sites" replace />} /></Routes>
 }
 
 export default App
