@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../auth/AuthContext'
 
-const nav = [{ to: '/sites', label: 'Sites' }, { to: '/devices', label: 'Devices' }]
+const nav = [{ to: '/sites', label: 'Sites' }, { to: '/devices', label: 'Devices' }, { to: '/sensor-types', label: 'Sensor Types' }]
 
 export function AppShell() {
   const { user, logout } = useAuth()

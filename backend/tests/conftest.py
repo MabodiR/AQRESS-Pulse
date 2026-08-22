@@ -58,10 +58,10 @@ def migrated_database() -> Iterator[None]:
 def clean_database(migrated_database: None) -> Iterator[None]:
     engine = create_engine(settings.database_url)
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE refresh_tokens, users CASCADE"))
+        connection.execute(text("TRUNCATE TABLE sensor_types, refresh_tokens, users CASCADE"))
     yield
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE refresh_tokens, users CASCADE"))
+        connection.execute(text("TRUNCATE TABLE sensor_types, refresh_tokens, users CASCADE"))
     engine.dispose()
 
 

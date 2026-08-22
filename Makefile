@@ -1,4 +1,4 @@
-.PHONY: up down build logs ps migrate downgrade seed-admin backend-test backend-lint frontend-lint frontend-typecheck frontend-build check
+.PHONY: up down build logs ps migrate downgrade seed-admin seed-sensor-types backend-test backend-lint frontend-lint frontend-typecheck frontend-build check
 
 up:
 	docker compose up --build
@@ -23,6 +23,9 @@ downgrade:
 
 seed-admin:
 	docker compose run --rm backend python -m app.scripts.seed_admin
+
+seed-sensor-types:
+	docker compose run --rm backend python -m app.scripts.seed_sensor_types
 
 backend-test:
 	docker compose run --rm backend pytest

@@ -29,3 +29,9 @@ async def require_writer(user: Annotated[User, Depends(get_current_user)]) -> Us
     if user.role == UserRole.VIEWER:
         raise AppError(status_code=403, code="FORBIDDEN", message="Your role does not allow this action.")
     return user
+
+
+async def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if user.role != UserRole.ADMIN:
+        raise AppError(status_code=403, code="FORBIDDEN", message="Administrator access is required.")
+    return user

@@ -1,8 +1,8 @@
 # AQRESS Pulse
 
-AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 3 Site and Device Management application**, built on the Phase 1 infrastructure and Phase 2 authentication foundation.
+AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 4 Sensor Type Framework**, built on the Phase 1 infrastructure, Phase 2 authentication, and Phase 3 Site and Device Management application.
 
-Authenticated users can create, search, view, edit, and deactivate sites and devices. Sensor management, MQTT device communication, telemetry, simulation, dashboards, and deployment are intentionally not implemented yet.
+Authenticated users can manage sites and devices and consume a reusable Sensor Type catalogue. Physical Sensor instances, MQTT device communication, telemetry, simulation, dashboards, and deployment are intentionally not implemented yet.
 
 ## Prerequisites
 
@@ -119,6 +119,41 @@ curl --request POST http://localhost:8000/api/v1/devices \
 
 New devices always start as `PROVISIONING`; Phase 3 never marks a device online automatically. Normal application flows use soft activation/deactivation and provide no physical delete endpoints.
 
+## Sensor Type framework
+
+A Sensor Type is a global reusable catalogue definition, not a physical Sensor attached to a Device. It defines a stable `code`, firmware-facing `driver_key`, controlled interface type, configuration contract, and one or more Measurement Definitions. Measurement keys are unique within their Sensor Type, so both BME280 and DS18B20 can legitimately expose `temperature`.
+
+Sensor Type endpoints are under `/api/v1/sensor-types`:
+
+- `GET/POST /sensor-types`
+- `GET/PUT /sensor-types/{id}`
+- `PATCH /sensor-types/{id}/status`
+- `GET/POST /sensor-types/{id}/measurements`
+- `PUT /sensor-types/{id}/measurements/{measurement_id}`
+
+All authenticated roles may read the catalogue. Only `ADMIN` may create, update, deactivate, or manage Measurement Definitions. The catalogue list supports standard page pagination, search across name/code/manufacturer/model, and `interface_type` and `is_active` filters.
+
+`configuration_schema` is PostgreSQL JSONB containing a documented subset of JSON Schema Draft 2020-12. Supported root keywords are `type`, `properties`, `required`, `title`, `description`, and `additionalProperties`. Supported field keywords are `type`, `title`, `description`, `default`, `minimum`, `maximum`, and `enum`. Field values may be `string`, `integer`, `number`, or `boolean`; nested objects are not supported in V0.1, and `additionalProperties` must be `false`.
+
+The backend uses the `jsonschema` library to validate both catalogue schemas and future configuration payloads through a reusable configuration validation service.
+
+Seed the development catalogue after migrations:
+
+```bash
+docker compose run --rm backend python -m app.scripts.seed_sensor_types
+# or
+make seed-sensor-types
+```
+
+The idempotent seed provides:
+
+- DS18B20 Temperature Sensor
+- BME280 Environmental Sensor with temperature, humidity, and pressure
+- Generic Digital Input
+- Generic Analog Input
+
+Open <http://localhost:5173/sensor-types> after login to browse the catalogue. Administrators can create/edit Sensor Types and add Measurement Definitions through the UI.
+
 ## Verify the stack
 
 ```bash
@@ -156,6 +191,7 @@ make logs     # follow logs
 make down     # stop services without deleting data
 make migrate  # apply Alembic migrations
 make seed-admin # create the configured local admin if absent
+make seed-sensor-types # create the reusable Sensor Type catalogue idempotently
 ```
 
 To reset the complete local environment, including PostgreSQL and EMQX data:
@@ -201,7 +237,7 @@ backend/                 FastAPI application and tests
   app/api/v1/            Versioned API routes
   app/core/              Configuration, security, and API errors
   app/db/                SQLAlchemy base and async sessions
-  app/models/            User, refresh-token, site, and device models
+  app/models/            User, Site, Device, and Sensor Type catalogue models
   app/repositories/      Database access
   app/schemas/           Pydantic API schemas
   app/services/          Authentication and domain business rules
@@ -222,11 +258,11 @@ The ingestion worker, simulator, and firmware directories will be added in their
 - Set a long random `EMQX_NODE_COOKIE` in `.env`; it protects Erlang node communication and must match across broker nodes if clustering is introduced later.
 - PostgreSQL uses host port `5433` by default to avoid collisions with an existing local PostgreSQL installation; it remains on port `5432` inside Compose.
 - EMQX dashboard credentials are configured separately from future per-device MQTT authentication and ACLs. Device identities and topic isolation belong to later phases.
-- PostgreSQL contains `users`, `refresh_tokens`, `sites`, `devices`, and Alembic version tables.
+- PostgreSQL contains `users`, `refresh_tokens`, `sites`, `devices`, `sensor_types`, `measurement_definitions`, and Alembic version tables.
 - Application source is copied into the local images rather than bind-mounted, which avoids Docker Desktop file-sharing requirements for the XAMPP workspace. Rebuild after code changes with `docker compose up --build`; use the optional direct-host commands for hot reload.
 - All database/API timestamps are timezone-aware and stored in UTC using PostgreSQL `TIMESTAMPTZ`.
 - Local development defaults are intentionally not production credentials. Replace them in `.env`; never commit that file.
 
 ## Phase boundary
 
-Phase 3 implements only the User → Site → Device hierarchy and authenticated management UI. It does not implement Sensors, MQTT device identities/ACLs, heartbeat processing, telemetry, readings, alerts, dashboards, simulation, or cloud deployment. Do not proceed to Phase 4 without an explicit instruction.
+Phase 4 implements only the reusable Sensor Type → Measurement Definition catalogue and JSON Schema configuration contract. It does not create physical Sensors, attach Sensor Types to Devices, or implement Sensor channels/configuration versions, MQTT, telemetry, readings, dashboards, simulation, or deployment. Do not proceed to Phase 5 without an explicit instruction.

@@ -40,9 +40,16 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         assert "devices" not in phase_two_tables
         engine.dispose()
 
+        command.upgrade(config, "20260822_0002")
+        engine = create_engine(test_url)
+        phase_three_tables = set(inspect(engine).get_table_names())
+        assert {"sites", "devices"}.issubset(phase_three_tables)
+        assert "sensor_types" not in phase_three_tables
+        engine.dispose()
+
         command.upgrade(config, "head")
         engine = create_engine(test_url)
-        assert {"users", "refresh_tokens", "sites", "devices", "alembic_version"}.issubset(
+        assert {"users", "refresh_tokens", "sites", "devices", "sensor_types", "measurement_definitions", "alembic_version"}.issubset(
             set(inspect(engine).get_table_names())
         )
         engine.dispose()
@@ -53,6 +60,8 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         assert "refresh_tokens" not in inspect(engine).get_table_names()
         assert "sites" not in inspect(engine).get_table_names()
         assert "devices" not in inspect(engine).get_table_names()
+        assert "sensor_types" not in inspect(engine).get_table_names()
+        assert "measurement_definitions" not in inspect(engine).get_table_names()
         engine.dispose()
     finally:
         with psycopg.connect(
