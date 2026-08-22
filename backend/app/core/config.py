@@ -29,6 +29,12 @@ class Settings:
     mqtt_keepalive_seconds: int = int(os.getenv("MQTT_KEEPALIVE_SECONDS", "30"))
     device_offline_timeout_seconds: int = int(os.getenv("DEVICE_OFFLINE_TIMEOUT_SECONDS", "90"))
     device_offline_check_interval_seconds: int = int(os.getenv("DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS", "10"))
+    telemetry_max_readings_per_message: int = int(
+        os.getenv("TELEMETRY_MAX_READINGS_PER_MESSAGE", "100")
+    )
+    telemetry_max_future_skew_seconds: int = int(
+        os.getenv("TELEMETRY_MAX_FUTURE_SKEW_SECONDS", "300")
+    )
 
     @property
     def cors_origins(self) -> list[str]:

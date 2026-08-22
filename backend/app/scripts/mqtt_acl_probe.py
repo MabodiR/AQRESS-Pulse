@@ -7,7 +7,12 @@ import uuid
 import paho.mqtt.client as mqtt
 
 from app.core.config import settings
-from app.mqtt.topics import config_ack_topic, config_topic, status_topic
+from app.mqtt.topics import (
+    config_ack_topic,
+    config_topic,
+    status_topic,
+    telemetry_topic,
+)
 
 
 def connection_allowed(username: str | None, password: str | None) -> bool:
@@ -96,8 +101,10 @@ def main() -> None:
     assert not connection_allowed(None, None), "Anonymous client connected"
     assert publish_allowed(args.username, args.password, status_topic(args.device_uid)), "Own status publish denied"
     assert publish_allowed(args.username, args.password, config_ack_topic(args.device_uid)), "Own ACK publish denied"
+    assert publish_allowed(args.username, args.password, telemetry_topic(args.device_uid)), "Own telemetry publish denied"
     assert subscribe_allowed(args.username, args.password, config_topic(args.device_uid)), "Own config subscribe denied"
     assert not publish_allowed(args.username, args.password, status_topic(args.other_device_uid)), "Cross-Device publish allowed"
+    assert not publish_allowed(args.username, args.password, telemetry_topic(args.other_device_uid)), "Cross-Device telemetry publish allowed"
     assert not subscribe_allowed(args.username, args.password, config_topic(args.other_device_uid)), "Cross-Device subscribe allowed"
     print("Authentication and per-Device broker ACLs: PASS")
 

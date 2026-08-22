@@ -19,7 +19,9 @@ def apply_sensor_configuration(sensor: dict[str, Any], state: DeviceState, *, fo
         return "A non-negative GPIO pin is required"
     if driver_key == "analog_input" and not _non_negative_integer(configuration.get("adc_pin")):
         return "A non-negative ADC pin is required"
-    state.sensor_configurations[sensor_uid] = sensor
+    with state.lock:
+        state.sensor_configurations[sensor_uid] = sensor
+        state.last_sampled_monotonic.pop(sensor_uid, None)
     return None
 
 

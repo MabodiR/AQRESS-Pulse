@@ -65,6 +65,8 @@ services:
       MQTT_KEEPALIVE_SECONDS: ${MQTT_KEEPALIVE_SECONDS:-30}
       DEVICE_OFFLINE_TIMEOUT_SECONDS: ${DEVICE_OFFLINE_TIMEOUT_SECONDS:-90}
       DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS: ${DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS:-10}
+      TELEMETRY_MAX_READINGS_PER_MESSAGE: ${TELEMETRY_MAX_READINGS_PER_MESSAGE:-100}
+      TELEMETRY_MAX_FUTURE_SKEW_SECONDS: ${TELEMETRY_MAX_FUTURE_SKEW_SECONDS:-300}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -125,6 +127,33 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  telemetry-worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.telemetry.worker"]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aqress_pulse}:${POSTGRES_PASSWORD:-aqress-pulse-local-only}@postgres:5432/${POSTGRES_DB:-aqress_pulse}
+      MQTT_HOST: emqx
+      MQTT_PORT: 1883
+      MQTT_PLATFORM_USERNAME: ${MQTT_PLATFORM_USERNAME:-platform:control}
+      MQTT_PLATFORM_PASSWORD: ${MQTT_PLATFORM_PASSWORD:-local-platform-control-change-me}
+      MQTT_KEEPALIVE_SECONDS: ${MQTT_KEEPALIVE_SECONDS:-30}
+      TELEMETRY_MAX_READINGS_PER_MESSAGE: ${TELEMETRY_MAX_READINGS_PER_MESSAGE:-100}
+      TELEMETRY_MAX_FUTURE_SKEW_SECONDS: ${TELEMETRY_MAX_FUTURE_SKEW_SECONDS:-300}
+    depends_on:
+      backend:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('emqx', 1883), 2).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
@@ -154,6 +183,8 @@ services:
       SIMULATOR_HEARTBEAT_INTERVAL_SECONDS: ${SIMULATOR_HEARTBEAT_INTERVAL_SECONDS:-15}
       SIMULATOR_FIRMWARE_VERSION: ${SIMULATOR_FIRMWARE_VERSION:-0.1.0}
       SIMULATOR_FORCE_CONFIG_FAILURE: ${SIMULATOR_FORCE_CONFIG_FAILURE:-false}
+      SIMULATOR_TELEMETRY_POLL_INTERVAL_SECONDS: ${SIMULATOR_TELEMETRY_POLL_INTERVAL_SECONDS:-0.25}
+      SIMULATOR_RANDOM_SEED: ${SIMULATOR_RANDOM_SEED:-20260822}
       MQTT_HOST: emqx
       MQTT_PORT: 1883
     depends_on:

@@ -9,6 +9,7 @@ from app.core.security import verify_password
 from app.mqtt.topics import (
     CONTROL_SUBSCRIPTIONS,
     NAMESPACE,
+    TELEMETRY_SUBSCRIPTION,
     command_topic,
     config_ack_topic,
     config_topic,
@@ -55,7 +56,8 @@ class MqttAuthService:
     async def authorize(self, username: str, action: str, topic: str) -> dict[str, str]:
         if secrets.compare_digest(username, settings.mqtt_platform_username):
             allowed = (action == "publish" and topic.startswith(f"{NAMESPACE}/") and topic.endswith("/config")) or (
-                action == "subscribe" and topic in CONTROL_SUBSCRIPTIONS
+                action == "subscribe"
+                and topic in (*CONTROL_SUBSCRIPTIONS, TELEMETRY_SUBSCRIPTION)
             )
             return {"result": "allow" if allowed else "deny"}
         credential = await self.credentials.get_by_username(username)
@@ -88,5 +90,11 @@ class MqttAuthService:
                 {"permission": "allow", "action": "subscribe", "topic": topic, "qos": [0, 1]}
                 for topic in CONTROL_SUBSCRIPTIONS
             ],
+            {
+                "permission": "allow",
+                "action": "subscribe",
+                "topic": TELEMETRY_SUBSCRIPTION,
+                "qos": [1],
+            },
             {"permission": "deny", "action": "all", "topic": "#"},
         ]

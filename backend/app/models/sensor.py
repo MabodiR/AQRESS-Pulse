@@ -23,6 +23,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.device import Device
+    from app.models.reading import SensorReading
     from app.models.sensor_type import MeasurementDefinition, SensorType
 
 
@@ -65,6 +66,7 @@ class Sensor(Base):
     sensor_type: Mapped["SensorType"] = relationship(back_populates="sensors")
     channels: Mapped[list["SensorChannel"]] = relationship(back_populates="sensor", cascade="all, delete-orphan", order_by="SensorChannel.name")
     configurations: Mapped[list["SensorConfiguration"]] = relationship(back_populates="sensor", cascade="all, delete-orphan", order_by="SensorConfiguration.config_version.desc()")
+    readings: Mapped[list["SensorReading"]] = relationship(back_populates="sensor")
 
     @property
     def current_configuration(self) -> "SensorConfiguration":
@@ -90,6 +92,7 @@ class SensorChannel(Base):
 
     sensor: Mapped[Sensor] = relationship(back_populates="channels")
     measurement_definition: Mapped["MeasurementDefinition"] = relationship(back_populates="sensor_channels")
+    readings: Mapped[list["SensorReading"]] = relationship(back_populates="sensor_channel")
 
     @property
     def key(self) -> str:

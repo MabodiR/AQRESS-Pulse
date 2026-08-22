@@ -7,6 +7,7 @@ CONTROL_SUBSCRIPTIONS = (
     f"{NAMESPACE}/+/status",
     f"{NAMESPACE}/+/config/ack",
 )
+TELEMETRY_SUBSCRIPTION = f"{NAMESPACE}/+/telemetry"
 
 
 def status_topic(device_uid: str) -> str:
@@ -53,3 +54,11 @@ def parse_control_topic(topic: str) -> ParsedControlTopic | None:
         device_uid=match.group("device_uid"),
         kind="status" if suffix == "status" else "config_ack",
     )
+
+
+def parse_telemetry_topic(topic: str) -> str | None:
+    match = re.fullmatch(
+        rf"{re.escape(NAMESPACE)}/(?P<device_uid>[A-Z0-9][A-Z0-9._:-]*)/telemetry",
+        topic,
+    )
+    return match.group("device_uid") if match else None

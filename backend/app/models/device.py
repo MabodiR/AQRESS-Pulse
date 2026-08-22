@@ -11,6 +11,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.device_mqtt_credential import DeviceMqttCredential
+    from app.models.reading import SensorReading
     from app.models.sensor import Sensor
     from app.models.site import Site
 
@@ -61,3 +62,4 @@ class Device(Base):
     mqtt_credential: Mapped["DeviceMqttCredential | None"] = relationship(
         back_populates="device", cascade="all, delete-orphan", uselist=False
     )
+    readings: Mapped[list["SensorReading"]] = relationship(back_populates="device")

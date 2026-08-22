@@ -12,6 +12,10 @@ class SimulatorSettings:
     heartbeat_interval_seconds: int = int(os.getenv("SIMULATOR_HEARTBEAT_INTERVAL_SECONDS", "15"))
     firmware_version: str = os.getenv("SIMULATOR_FIRMWARE_VERSION", "0.1.0")
     force_config_failure: bool = os.getenv("SIMULATOR_FORCE_CONFIG_FAILURE", "false").casefold() == "true"
+    telemetry_poll_interval_seconds: float = float(
+        os.getenv("SIMULATOR_TELEMETRY_POLL_INTERVAL_SECONDS", "0.25")
+    )
+    random_seed: int = int(os.getenv("SIMULATOR_RANDOM_SEED", "20260822"))
 
     def validate(self) -> None:
         missing = [name for name, value in (("SIMULATOR_DEVICE_UID", self.device_uid), ("SIMULATOR_MQTT_USERNAME", self.mqtt_username), ("SIMULATOR_MQTT_PASSWORD", self.mqtt_password)) if not value]

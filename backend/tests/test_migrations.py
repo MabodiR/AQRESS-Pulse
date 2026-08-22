@@ -61,6 +61,13 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         assert "device_mqtt_credentials" not in phase_five_tables
         engine.dispose()
 
+        command.upgrade(config, "20260822_0005")
+        engine = create_engine(test_url)
+        phase_six_tables = set(inspect(engine).get_table_names())
+        assert "device_mqtt_credentials" in phase_six_tables
+        assert "sensor_readings" not in phase_six_tables
+        engine.dispose()
+
         command.upgrade(config, "head")
         engine = create_engine(test_url)
         inspector = inspect(engine)
@@ -68,7 +75,7 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
             set(inspector.get_table_names())
         )
         assert "device_mqtt_credentials" in inspector.get_table_names()
-        assert "sensor_readings" not in inspector.get_table_names()
+        assert "sensor_readings" in inspector.get_table_names()
         assert "uq_sensors_device_id_sensor_uid" in {item["name"] for item in inspector.get_unique_constraints("sensors")}
         assert "uq_sensor_channels_sensor_id_measurement_definition_id" in {item["name"] for item in inspector.get_unique_constraints("sensor_channels")}
         assert "uq_sensor_configurations_sensor_id_config_version" in {item["name"] for item in inspector.get_unique_constraints("sensor_configurations")}
@@ -76,6 +83,33 @@ def test_migrations_upgrade_empty_database_and_downgrade() -> None:
         assert current_index["unique"] is True
         assert current_index["dialect_options"]["postgresql_where"] == "is_current"
         assert {item["name"] for item in inspector.get_unique_constraints("device_mqtt_credentials")} >= {"uq_device_mqtt_credentials_device_id", "uq_device_mqtt_credentials_username"}
+        assert "uq_sensor_readings_device_message_index" in {
+            item["name"] for item in inspector.get_unique_constraints("sensor_readings")
+        }
+        assert {item["name"] for item in inspector.get_check_constraints("sensor_readings")} >= {
+            "ck_sensor_readings_exactly_one_value",
+            "ck_sensor_readings_reading_index_nonnegative",
+        }
+        assert {item["name"] for item in inspector.get_indexes("sensor_readings")} >= {
+            "ix_sensor_readings_channel_recorded",
+            "ix_sensor_readings_sensor_recorded",
+            "ix_sensor_readings_device_recorded",
+            "ix_sensor_readings_recorded_at",
+        }
+        reading_columns = {item["name"]: item for item in inspector.get_columns("sensor_readings")}
+        assert reading_columns["recorded_at"]["type"].timezone is True
+        assert reading_columns["received_at"]["type"].timezone is True
+        reading_foreign_keys = {
+            item["name"]: item for item in inspector.get_foreign_keys("sensor_readings")
+        }
+        assert {
+            reading_foreign_keys[name]["options"].get("ondelete")
+            for name in (
+                "fk_sensor_readings_device_id_devices",
+                "fk_sensor_readings_sensor_id_sensors",
+                "fk_sensor_readings_sensor_channel_id_sensor_channels",
+            )
+        } == {"RESTRICT"}
         engine.dispose()
 
         command.downgrade(config, "base")
