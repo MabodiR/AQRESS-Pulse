@@ -1,8 +1,8 @@
 # AQRESS Pulse
 
-AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 5 Physical Sensor Management** application, built on the Phase 1 infrastructure, Phase 2 authentication, Phase 3 Site and Device Management, and Phase 4 Sensor Type Framework.
+AQRESS Pulse is a configurable IoT sensor and device management platform. This repository contains the **V0.1.1 Phase 6 Device Communication and Simulator** application, built on the foundations delivered in Phases 1–5.
 
-Authenticated users can attach physical Sensors to Devices, generate Channels from the reusable Sensor Type catalogue, and maintain immutable desired-configuration history. MQTT device communication, telemetry, simulation, dashboards, and deployment are intentionally not implemented yet.
+Devices authenticate to EMQX with individually provisioned credentials and broker-enforced per-Device topic ACLs. The MQTT control worker tracks heartbeat presence and configuration acknowledgments, while the optional simulator exercises the complete control-plane lifecycle. Telemetry ingestion, readings, dashboards, deployment, and cloud infrastructure are intentionally not implemented yet.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ Authenticated users can attach physical Sensors to Devices, generate Channels fr
 
 2. Change all local-only passwords, `JWT_SECRET_KEY`, and `EMQX_NODE_COOKIE` in `.env`.
 
-3. Build and start all services:
+3. Build and start the core services:
 
    ```bash
    docker compose up --build
@@ -52,6 +52,8 @@ docker compose run --rm backend python -m app.scripts.seed_admin
 The seed reads `AQRESS_PULSE_ADMIN_*` values from `.env` and is idempotent.
 
 Open <http://localhost:5173> and sign in with the configured development admin email and password. The frontend restores sessions through `/auth/me`, rotates expired access tokens through `/auth/refresh`, and logs out when refresh is no longer valid.
+
+The optional Device simulator is started separately after an administrator provisions its one-time MQTT password; see [Device communication and simulator](#device-communication-and-simulator).
 
 ## Database migrations
 
@@ -160,7 +162,7 @@ A Sensor is a physical instance attached to one Device and backed by one Sensor 
 
 Creating a Sensor is atomic. AQRESS Pulse validates the active Device, the active and ready Sensor Type, and the submitted values against the Phase 4 JSON Schema contract. It then creates exactly one Sensor Channel for each Measurement Definition and configuration version 1. Channels preserve the catalogue definition present at registration time; later catalogue changes are not automatically reconciled with existing Sensors in Phase 5.
 
-Configuration edits never overwrite history. They supersede the previous desired version and create the next version as `PENDING`, with a PostgreSQL partial unique index ensuring only one `is_current = true` record per Sensor. “Current” means the latest desired state in AQRESS Pulse. It does not mean hardware has received or applied it; `APPLIED` and `applied_at` remain reserved for a later MQTT synchronization phase.
+Configuration edits never overwrite history. They supersede the previous desired version and create the next version as `PENDING`, with a PostgreSQL partial unique index ensuring only one `is_current = true` record per Sensor. “Current” means the latest desired state in AQRESS Pulse. Phase 6 can publish that state to the Device, then record its `APPLIED` or `FAILED` acknowledgment.
 
 To add a Sensor, open an active Device, choose **Add Sensor**, select a ready Sensor Type, enter its identity, complete the dynamically generated configuration form, review, and save. The generic renderer supports the Phase 4 schema subset: string, integer, number, boolean, enum, title, description, defaults, minimum/maximum, and required fields.
 
@@ -174,6 +176,112 @@ Sensor endpoints are under `/api/v1`:
 
 `ADMIN` and `USER` may manage Sensor instances, Channels, and configuration versions. `VIEWER` is read-only. Sensor Type catalogue writes remain restricted to `ADMIN`.
 
+## Device communication and simulator
+
+Each Device has a stable MQTT username (`device:<device_uid>`) and a random password that is shown only when provisioned or rotated. AQRESS Pulse stores only its Argon2id hash. Provision, rotate, and revoke are administrator-only operations on Device Detail. Rotation immediately invalidates the prior password on the next connection; revocation prevents authentication entirely.
+
+EMQX delegates password authentication to the internal-only `mqtt-auth` service. Its successful response contains an exact per-Device ACL, and the broker applies default-deny authorization. A Device may publish only its own heartbeat, configuration acknowledgment, and reserved telemetry topic, and may subscribe only to its own configuration and reserved command topic. The separate platform identity can publish Device configurations and subscribe to heartbeat and acknowledgment topics. `mqtt-auth` has no host port and does not expose API documentation.
+
+The Phase 6 topic namespace is:
+
+```text
+aqress/pulse/v1/devices/{device_uid}/status
+aqress/pulse/v1/devices/{device_uid}/config
+aqress/pulse/v1/devices/{device_uid}/config/ack
+aqress/pulse/v1/devices/{device_uid}/telemetry   # reserved; not consumed
+aqress/pulse/v1/devices/{device_uid}/command     # reserved; not published
+aqress/pulse/v1/devices/{device_uid}/command/ack # reserved; not consumed
+```
+
+Configuration snapshots use QoS 1 and retained delivery. The worker subscribes only to `status` and `config/ack`; it deliberately does not subscribe to telemetry. Valid heartbeats set the Device `ONLINE` and update `last_seen` with server receive time. An `ONLINE` Device becomes `OFFLINE` after `DEVICE_OFFLINE_TIMEOUT_SECONDS` without a heartbeat. Disabled Devices are not brought online and are excluded from offline transitions.
+
+A heartbeat has this shape (the first four fields are required):
+
+```json
+{
+  "device_uid": "ESP32-A8C339",
+  "timestamp": "2026-08-22T14:30:00Z",
+  "status": "ONLINE",
+  "uptime_seconds": 120,
+  "firmware_version": "0.1.0",
+  "wifi_rssi": -61,
+  "free_memory": 183240
+}
+```
+
+A Device configuration is one snapshot containing stable external identifiers, each current desired version, its configuration, and its Channels:
+
+```json
+{
+  "message_id": "a UUID",
+  "device_uid": "ESP32-A8C339",
+  "generated_at": "2026-08-22T14:35:00Z",
+  "sensors": [{
+    "sensor_uid": "ENV-001",
+    "driver_key": "bme280",
+    "enabled": true,
+    "configuration_version": 2,
+    "configuration": {"i2c_address": "0x76", "sample_interval_seconds": 30},
+    "channels": [{"key": "temperature", "enabled": true, "unit": "°C"}]
+  }]
+}
+```
+
+The acknowledgment echoes the snapshot `message_id` and reports `APPLIED` or `FAILED` for each Sensor version:
+
+```json
+{
+  "message_id": "the snapshot UUID",
+  "device_uid": "ESP32-A8C339",
+  "timestamp": "2026-08-22T14:35:02Z",
+  "results": [{
+    "sensor_uid": "ENV-001",
+    "configuration_version": 2,
+    "status": "APPLIED",
+    "error": null
+  }]
+}
+```
+
+Configuration statuses have these meanings:
+
+- `PENDING`: desired version exists but has not been successfully published.
+- `PUBLISHED`: the retained snapshot was accepted by EMQX and is awaiting the Device.
+- `APPLIED`: the Device acknowledged that exact current Sensor version successfully.
+- `FAILED`: the Device rejected that exact current Sensor version.
+- `SUPERSEDED`: a newer desired version replaced it.
+
+Duplicate acknowledgments are idempotent and stale-version acknowledgments are ignored. Publishing an already applied current version does not create a new version or regress its status. A broker publish failure leaves the database state unchanged.
+
+To run the simulator:
+
+1. Sign in as an administrator, open a Device, and choose **Provision Credentials** (or **Rotate Credentials**).
+2. Copy the one-time username and password into the `SIMULATOR_*` values in your ignored `.env`.
+3. Start the simulator profile:
+
+   ```bash
+   docker compose --profile simulator up --build simulator
+   ```
+
+The simulator publishes heartbeats, receives retained configuration snapshots, keeps supported configuration in memory, and publishes acknowledgments. It never generates telemetry in Phase 6. Set `SIMULATOR_FORCE_CONFIG_FAILURE=true` to test a deterministic `FAILED` acknowledgment. Stop it and wait for the configured timeout to verify the `OFFLINE` transition.
+
+Device communication endpoints are under `/api/v1/devices/{device_id}`:
+
+- `GET /mqtt-credentials/status` for credential metadata (all authenticated roles).
+- `POST /mqtt-credentials`, `/mqtt-credentials/rotate`, and `/mqtt-credentials/revoke` (`ADMIN` only).
+- `POST /sync-configuration` (`ADMIN` and `USER`).
+
+To verify credentials and ACLs directly against the live broker, run the built-in probe from the backend network after provisioning:
+
+```bash
+docker compose exec backend python -m app.scripts.mqtt_acl_probe \
+  --username 'device:ESP32-A8C339' \
+  --password 'ONE_TIME_PASSWORD' \
+  --device-uid ESP32-A8C339
+```
+
+The probe requires valid authentication, tests status/ACK publishing and config subscription, and verifies that cross-Device operations are denied. Add `--expect-rejected` when checking an old or revoked password.
+
 ## Verify the stack
 
 ```bash
@@ -184,7 +292,7 @@ docker compose exec postgres pg_isready -U aqress_pulse -d aqress_pulse
 docker compose exec emqx emqx ctl status
 ```
 
-Run all Phase 1–5 checks:
+Run all Phase 1–6 checks:
 
 ```bash
 make check
@@ -195,6 +303,8 @@ Or run checks separately:
 ```bash
 docker compose run --rm backend ruff check .
 docker compose run --rm backend pytest
+docker compose --profile simulator run --rm simulator ruff check .
+docker compose --profile simulator run --rm simulator pytest
 docker compose run --rm frontend npm run lint
 docker compose run --rm frontend npm run typecheck
 docker compose run --rm frontend npm run build
@@ -263,13 +373,15 @@ backend/                 FastAPI application and tests
   app/services/          Authentication and domain business rules
   alembic/               Versioned PostgreSQL migrations
 frontend/                React + TypeScript + Vite application
+simulator/               Phase 6 authenticated Device simulator and tests
+emqx/                    Pinned EMQX image and broker auth/ACL configuration
 Doc/                     Product and engineering source documents
 docker-compose.yml       Local service orchestration
 .env.example             Safe local configuration template
 Makefile                 Common development commands
 ```
 
-The ingestion worker, simulator, and firmware directories will be added in their assigned phases rather than populated prematurely.
+The MQTT control worker lives under `backend/app/mqtt`. No ingestion or firmware implementation exists in Phase 6.
 
 ## Local configuration notes
 
@@ -277,12 +389,12 @@ The ingestion worker, simulator, and firmware directories will be added in their
 - Compose has local fallback values so the stack can start before `.env` is copied. Change them before using the environment beyond isolated local development.
 - Set a long random `EMQX_NODE_COOKIE` in `.env`; it protects Erlang node communication and must match across broker nodes if clustering is introduced later.
 - PostgreSQL uses host port `5433` by default to avoid collisions with an existing local PostgreSQL installation; it remains on port `5432` inside Compose.
-- EMQX dashboard credentials are configured separately from future per-device MQTT authentication and ACLs. Device identities and topic isolation belong to later phases.
-- PostgreSQL contains `users`, `refresh_tokens`, `sites`, `devices`, `sensor_types`, `measurement_definitions`, `sensors`, `sensor_channels`, `sensor_configurations`, and Alembic version tables. It intentionally does not contain `sensor_readings`.
+- EMQX dashboard credentials are independent of Device MQTT credentials. Device and platform access is authenticated through the internal service and authorized by broker-enforced ACLs.
+- PostgreSQL contains the Phase 1–5 tables plus `device_mqtt_credentials`. It intentionally does not contain `sensor_readings`.
 - Application source is copied into the local images rather than bind-mounted, which avoids Docker Desktop file-sharing requirements for the XAMPP workspace. Rebuild after code changes with `docker compose up --build`; use the optional direct-host commands for hot reload.
 - All database/API timestamps are timezone-aware and stored in UTC using PostgreSQL `TIMESTAMPTZ`.
 - Local development defaults are intentionally not production credentials. Replace them in `.env`; never commit that file.
 
 ## Phase boundary
 
-Phase 5 implements local physical Sensor registration, generated Channels, and immutable desired-configuration versioning. It does not publish or subscribe over MQTT, create broker credentials or ACLs, update Device presence, mark configurations published/applied, ingest telemetry, create readings, simulate hardware, build dashboards, or deploy cloud infrastructure. Do not proceed to Phase 6 without an explicit instruction.
+Phase 6 implements secure per-Device MQTT identities, broker-enforced isolation, heartbeat presence, desired-configuration publish/acknowledgment, and a control-plane simulator. It does **not** ingest telemetry, create readings, produce simulated measurements, build dashboards, deploy infrastructure, or implement any Phase 7+ work.

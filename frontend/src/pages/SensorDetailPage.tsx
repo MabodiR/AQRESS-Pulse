@@ -123,11 +123,13 @@ export function SensorDetailPage() {
   const sensor = useQuery({
     queryKey: ["sensor", sensorId],
     queryFn: () => api<Sensor>(`/sensors/${sensorId}`),
+    refetchInterval: 5000,
   });
   const history = useQuery({
     queryKey: ["sensor-configurations", sensorId],
     queryFn: () =>
       api<SensorConfiguration[]>(`/sensors/${sensorId}/configurations`),
+    refetchInterval: 5000,
   });
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["sensor", sensorId] });
@@ -183,8 +185,14 @@ export function SensorDetailPage() {
         <StatusBadge status={item.current_configuration.status} />
         {item.current_configuration.status === "PENDING" ? (
           <span className="text-sm text-amber-300">
-            Pending device synchronization — MQTT delivery begins in a later
-            phase.
+            Pending device synchronization. Use Synchronize Configuration on
+            the Device page to publish it.
+          </span>
+        ) : null}
+        {item.current_configuration.status === "FAILED" ? (
+          <span className="text-sm text-red-300">
+            The Device rejected this configuration. Review it, create a new
+            version, and synchronize again.
           </span>
         ) : null}
         {canWrite ? (

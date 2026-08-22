@@ -1,4 +1,5 @@
 from app.models.device import ConnectionType, Device, DeviceStatus
+from app.models.device_mqtt_credential import DeviceMqttCredential
 from app.models.refresh_token import RefreshToken
 from app.models.sensor import (
     ConfigurationStatus,
@@ -20,6 +21,7 @@ __all__ = [
     "ConnectionType",
     "Device",
     "DeviceStatus",
+    "DeviceMqttCredential",
     "RefreshToken",
     "ConfigurationStatus",
     "Sensor",

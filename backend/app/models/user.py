@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, String, func
+from sqlalchemy import Boolean, DateTime, Enum, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,11 +22,12 @@ class UserRole(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("email", name="uq_users_email"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role"), nullable=False, default=UserRole.USER

@@ -19,7 +19,8 @@ services:
     restart: unless-stopped
 
   emqx:
-    image: emqx/emqx:5.8.6
+    build:
+      context: ./emqx
     environment:
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USERNAME:-admin}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-aqress-pulse-local-only}
@@ -30,6 +31,9 @@ services:
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
+    depends_on:
+      mqtt-auth:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
       interval: 10s
@@ -56,15 +60,65 @@ services:
       AQRESS_PULSE_ADMIN_LAST_NAME: ${AQRESS_PULSE_ADMIN_LAST_NAME:-Administrator}
       MQTT_HOST: emqx
       MQTT_PORT: 1883
+      MQTT_PLATFORM_USERNAME: ${MQTT_PLATFORM_USERNAME:-platform:control}
+      MQTT_PLATFORM_PASSWORD: ${MQTT_PLATFORM_PASSWORD:-local-platform-control-change-me}
+      MQTT_KEEPALIVE_SECONDS: ${MQTT_KEEPALIVE_SECONDS:-30}
+      DEVICE_OFFLINE_TIMEOUT_SECONDS: ${DEVICE_OFFLINE_TIMEOUT_SECONDS:-90}
+      DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS: ${DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS:-10}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  mqtt-auth:
+    build:
+      context: ./backend
+    command: ["uvicorn", "app.internal:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aqress_pulse}:${POSTGRES_PASSWORD:-aqress-pulse-local-only}@postgres:5432/${POSTGRES_DB:-aqress_pulse}
+      MQTT_PLATFORM_USERNAME: ${MQTT_PLATFORM_USERNAME:-platform:control}
+      MQTT_PLATFORM_PASSWORD: ${MQTT_PLATFORM_PASSWORD:-local-platform-control-change-me}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/internal/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  mqtt-worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.mqtt.worker"]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-aqress_pulse}:${POSTGRES_PASSWORD:-aqress-pulse-local-only}@postgres:5432/${POSTGRES_DB:-aqress_pulse}
+      MQTT_HOST: emqx
+      MQTT_PORT: 1883
+      MQTT_PLATFORM_USERNAME: ${MQTT_PLATFORM_USERNAME:-platform:control}
+      MQTT_PLATFORM_PASSWORD: ${MQTT_PLATFORM_PASSWORD:-local-platform-control-change-me}
+      MQTT_KEEPALIVE_SECONDS: ${MQTT_KEEPALIVE_SECONDS:-30}
+      DEVICE_OFFLINE_TIMEOUT_SECONDS: ${DEVICE_OFFLINE_TIMEOUT_SECONDS:-90}
+      DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS: ${DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS:-10}
+    depends_on:
+      backend:
+        condition: service_healthy
       emqx:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=2)"]
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('emqx', 1883), 2).close()"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -87,6 +141,24 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    restart: unless-stopped
+
+  simulator:
+    profiles: ["simulator"]
+    build:
+      context: ./simulator
+    environment:
+      SIMULATOR_DEVICE_UID: ${SIMULATOR_DEVICE_UID:-}
+      SIMULATOR_MQTT_USERNAME: ${SIMULATOR_MQTT_USERNAME:-}
+      SIMULATOR_MQTT_PASSWORD: ${SIMULATOR_MQTT_PASSWORD:-}
+      SIMULATOR_HEARTBEAT_INTERVAL_SECONDS: ${SIMULATOR_HEARTBEAT_INTERVAL_SECONDS:-15}
+      SIMULATOR_FIRMWARE_VERSION: ${SIMULATOR_FIRMWARE_VERSION:-0.1.0}
+      SIMULATOR_FORCE_CONFIG_FAILURE: ${SIMULATOR_FORCE_CONFIG_FAILURE:-false}
+      MQTT_HOST: emqx
+      MQTT_PORT: 1883
+    depends_on:
+      emqx:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

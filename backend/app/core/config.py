@@ -22,6 +22,13 @@ class Settings:
     admin_password: str | None = os.getenv("AQRESS_PULSE_ADMIN_PASSWORD")
     admin_first_name: str = os.getenv("AQRESS_PULSE_ADMIN_FIRST_NAME", "Local")
     admin_last_name: str = os.getenv("AQRESS_PULSE_ADMIN_LAST_NAME", "Administrator")
+    mqtt_host: str = os.getenv("MQTT_HOST", "localhost")
+    mqtt_port: int = int(os.getenv("MQTT_PORT", "1883"))
+    mqtt_platform_username: str = os.getenv("MQTT_PLATFORM_USERNAME", "platform:control")
+    mqtt_platform_password: str = os.getenv("MQTT_PLATFORM_PASSWORD", "local-platform-control-change-me")
+    mqtt_keepalive_seconds: int = int(os.getenv("MQTT_KEEPALIVE_SECONDS", "30"))
+    device_offline_timeout_seconds: int = int(os.getenv("DEVICE_OFFLINE_TIMEOUT_SECONDS", "90"))
+    device_offline_check_interval_seconds: int = int(os.getenv("DEVICE_OFFLINE_CHECK_INTERVAL_SECONDS", "10"))
 
     @property
     def cors_origins(self) -> list[str]:

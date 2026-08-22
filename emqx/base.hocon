@@ -1,0 +1,28 @@
+authentication = [
+  {
+    mechanism = password_based
+    backend = http
+    method = post
+    url = "http://mqtt-auth:8001/internal/mqtt/authenticate"
+    headers {
+      "content-type" = "application/json"
+      "x-request-source" = "EMQX"
+    }
+    body {
+      username = "${username}"
+      password = "${password}"
+      clientid = "${clientid}"
+    }
+    connect_timeout = "5s"
+    request_timeout = "5s"
+    pool_size = 8
+    enable_pipelining = 100
+    ssl { enable = false }
+  }
+]
+
+authorization {
+  no_match = deny
+  deny_action = disconnect
+  sources = []
+}
